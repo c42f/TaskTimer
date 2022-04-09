@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" >
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+	<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, width=device-width">
+
+	<title>Timer</title>
+
+	<link rel="stylesheet" href="https://muffinman.io/skyblue/css/skyblue.css">
+	<link rel="stylesheet" href="demo.css">
+</head>
+
+<body>
+
+  <div class='content margin-y-40'>
+
+      <h1>Task timer</h1>
+
+      <div class='examples'>
+          <div class='example'>
+              <div class='example-two'></div>
+              <p>Select time:</p>
+              <button class='btn btn-sm btn-light animate-two' data-angle='10'>10 min</button>
+              <button class='btn btn-sm btn-light animate-two' data-angle='20'>20 min</button>
+              <button class='btn btn-sm btn-light animate-two' data-angle='30'>30 min</button>
+              <button class='btn btn-sm btn-light animate-two' data-angle='45'>45 min</button>
+              <button class='btn btn-sm btn-light animate-two' data-angle='60'>60 min</button>
+          </div>
+      </div>
+
+      <script src='components/tasktimer.js'></script>
+
+      <script>
+          var taskTimer = new TaskTimer('.example-two', {
+              size: 200,
+              stroke: 30,
+              arc: true,
+              time: 20*60,
+              sectorColor: '#bD2828',
+              fillCircle: false
+          });
+
+          elements = document.querySelectorAll('.animate-two');
+          for (var i = 0; i < elements.length; i++) {
+              elements[i].addEventListener('click', function(e) {
+                  var mins = parseInt(e.target.getAttribute('data-angle'), 10);
+                  taskTimer.startTimer(60*mins);
+              });
+          }
+
+          taskTimer.element.addEventListener('click', function(e) {
+              taskTimer.togglePaused();
+          })
+
+          taskTimer.element.addEventListener('dblclick', function(e) {
+              taskTimer.startTimer(taskTimer.getTimeClick(e));
+          })
+
+      </script>
+</body>
+</html>
