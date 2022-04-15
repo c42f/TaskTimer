@@ -1,24 +1,18 @@
 // export class TaskTimer extends HTMLElement {
 
-class TaskTimer {
-    constructor(selector, options) {
-        // super()
+class TaskTimer extends HTMLElement {
+    constructor() {
+        super()
 
-        this.element = document.querySelector(selector);
         this.animationId = false;
 
-        const defaultOptions = {
-            size: 100,
-            stroke: 10,
-            arc: false,
-            time: 20*60,
-            sectorColor: '#789',
-            circleColor: '#DDD',
-            fillCircle: true
+        let options = {
+              size: 200,
+              stroke: 30,
+              arc: true,
+              time: 20*60,
+              circleColor: '#DDD'
         };
-
-        // Merge options with default ones
-        options = Object.assign(defaultOptions, options);
 
         // Reset stroke to 0 if drawing full sector
         options.stroke = options.arc ? options.stroke : 0;
@@ -54,11 +48,11 @@ class TaskTimer {
                 ${tickMarks}
                 ${this.getSector()}
             </svg>`
+        this.innerHTML = svg;
+        this.svg    = this.childNodes[0];
 
-        this.element.innerHTML = svg;
-        this.svg    = this.element.childNodes[0];
         this.testPt = this.svg.createSVGPoint();
-        this.sector = this.element.querySelector('.TaskTimer-sector');
+        this.sector = this.querySelector('.TaskTimer-sector');
 
         this.timeRemaining = options.time;
         this.isPaused = true;
@@ -134,19 +128,20 @@ class TaskTimer {
         const firstArc = this.getArc(firstAngle, options);
         const secondArc = options.angle > 180 ? this.getArc(secondAngle, options) : '';
 
-        // start -> starting line
-        // end -> will path be closed or not
-        let end = '';
-        let start = null;
+        return `M${options.center},${options.stroke / 2} ${firstArc} ${secondArc}`;
+    }
 
-        if (options.arc) {
-            start = `M${options.center},${options.stroke / 2}`;
-        } else {
-            start = `M${options.center},${options.center} L${options.center},${options.stroke / 2}`;
-            end = 'z';
-        }
+    getSector() {
+        const options = this.options;
 
-        return `${start} ${firstArc} ${secondArc} ${end}`;
+        const d = this.getSectorD()
+
+        return `<path
+            class='TaskTimer-sector'
+            stroke-width='${options.stroke}'
+            fill='none'
+            stroke='#bD2828'
+            d='${d}' />`;
     }
 
     // Get time which the user clicked on
@@ -163,31 +158,13 @@ class TaskTimer {
         return 3600 * (Math.atan2(x, y) + Math.PI)/(2*Math.PI);
     }
 
-    getSector() {
-        const options = this.options;
-
-        // Colors
-        const sectorFill = options.arc ? 'none' : options.sectorColor;
-        const sectorStroke = options.arc ? options.sectorColor : 'none';
-
-        const d = this.getSectorD()
-
-        return `<path
-            class='TaskTimer-sector'
-            stroke-width='${options.stroke}'
-            fill=${sectorFill}
-            stroke=${sectorStroke}
-            d='${d}' />`;
-    }
-
     getCircle() {
         const options = this.options;
-        const circleFill = options.fillCircle || !options.arc ? options.circleColor : 'none';
 
         return `<circle
             class='TaskTimer-circle'
             stroke-width='${options.stroke}'
-            fill=${circleFill}
+            fill='none'
             stroke=${options.circleColor}
             cx='${options.center}'
             cy='${options.center}'
@@ -198,14 +175,19 @@ class TaskTimer {
     getArc(angle) {
         const options = this.options;
 
-        const x = options.center - options.radius * Math.cos(this.radians(angle));
-        const y = options.center + options.radius * Math.sin(this.radians(angle));
+        const x = options.center - options.radius * Math.cos(this.deg2rad(angle));
+        const y = options.center + options.radius * Math.sin(this.deg2rad(angle));
 
         return `A${options.radius},${options.radius} 0 0 0 ${x},${y}`
     }
 
     // Converts from degrees to radians.
-    radians(degrees) {
+    deg2rad(degrees) {
         return degrees / 180 * Math.PI;
     }
+}
+
+if (!window.customElements.get('task-timer')) {
+  window.TaskTimer = TaskTimer
+  window.customElements.define('task-timer', TaskTimer)
 }
