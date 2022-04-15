@@ -1,5 +1,3 @@
-// export class TaskTimer extends HTMLElement {
-
 class TaskTimer extends HTMLElement {
     constructor() {
         super()
@@ -9,66 +7,125 @@ class TaskTimer extends HTMLElement {
         let options = {
               size: 200,
               stroke: 30,
-              arc: true,
               time: 20*60,
               circleColor: '#DDD'
         };
 
-        // Reset stroke to 0 if drawing full sector
-        options.stroke = options.arc ? options.stroke : 0;
-
         // Circle dimenstions
-        options.center = options.size / 2;
-        options.radius = options.stroke ? options.center - (options.stroke) / 2 : options.center;
+        const c = options.size / 2;
+        const s = options.stroke;
+        const r = c - s/2;
+
+        options.center = c;
+        options.radius = r;
 
         this.options = options;
 
-        this.checkAngle();
-
         const tickR1 = options.size / 2;
         const tickR2 = options.size / 2 - options.stroke;
-        var tickMarks = ''
+        var fiveMinuteTickMarks = ''
+        var oneMinuteTickMarks = ''
         // 1 minute ticks
         for (var i = 0; i < 60; i += 1) {
             const angle = 2*Math.PI * i/60;
-            const x1 = options.center - tickR1 * Math.cos(angle);
-            const y1 = options.center + tickR1 * Math.sin(angle);
-            const x2 = options.center - tickR2 * Math.cos(angle);
-            const y2 = options.center + tickR2 * Math.sin(angle);
+            const x1 = c - tickR1 * Math.cos(angle);
+            const y1 = c + tickR1 * Math.sin(angle);
+            const x2 = c - tickR2 * Math.cos(angle);
+            const y2 = c + tickR2 * Math.sin(angle);
 
-            var tickClass = (i % 5 == 0) ? "FiveMinuteTicks" : "OneMinuteTicks"
-
-            tickMarks = `${tickMarks}
-              <line class="${tickClass}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`
+            const line = `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`
+            if (i % 5 == 0) {
+                fiveMinuteTickMarks = `${fiveMinuteTickMarks} ${line}`
+            }
+            else {
+                oneMinuteTickMarks = `${oneMinuteTickMarks} ${line}`
+            }
         }
 
-        const svg =
-            `<svg class='TaskTimer' viewBox='0 0 ${options.size} ${options.size}'>
-                ${this.getCircle()}
-                ${tickMarks}
-                ${this.getSector()}
+        const svg_text =
+            `<svg class='TaskTimer' viewBox='0 0 200 200'>
+                <circle
+                    class='TimeIndicatorBackground'
+                    stroke-width='${s}'
+                    fill='none'
+                    stroke=${options.circleColor}
+                    cx='${c}'
+                    cy='${c}'
+                    r='${r}'
+                />
+                <g class="StartStopButton">
+                    <circle
+                        cx='${c}'
+                        cy='${c}'
+                        r='${r*0.4}'
+                        fill='#F8F8F8'
+                    />
+                    <polygon class='StartIcon'
+                        points='${c-15},${c-17} ${c-15},${c+17} ${c+17},${c}'
+                        fill='#999'
+                        stroke='#999'
+                        stroke-linejoin='round'
+                        stroke-width='10'
+                        visibility='visible'
+                    />
+                    <g class='PauseIcon'
+                        fill='none'
+                        stroke='#999'
+                        stroke-linecap='round'
+                        stroke-width='10'
+                        visibility='visible'
+                    >
+                        <line x1='${c-15}' y1='${c-17}' x2='${c-15}' y2='${c+17}'/>
+                        <line x1='${c+15}' y1='${c-17}' x2='${c+15}' y2='${c+17}'/>
+                    </g>
+                </g>
+                <g class='OneMinuteTickMarks'
+                    stroke='#EEE'
+                    stroke-width='0.5'
+                >
+                    ${oneMinuteTickMarks}
+                </g>
+                <g class='FiveMinuteTickMarks'
+                    stroke='#EEE'
+                    stroke-width='1.5'
+                >
+                    ${fiveMinuteTickMarks}
+                </g>
+                <path
+                    class='TimeIndicator'
+                    stroke-width='${s}'
+                    fill='none'
+                    stroke='#bD2828'
+                    d=''/>
+                <circle
+                    class='TimeIndicatorForeground'
+                    stroke-width='${s}'
+                    fill='none'
+                    stroke='none'
+                    cx='${c}'
+                    cy='${c}'
+                    r='${r}'
+                    pointer-events='stroke'
+                />
             </svg>`
-        this.innerHTML = svg;
+
+        this.innerHTML = svg_text;
         this.svg    = this.childNodes[0];
 
         this.testPt = this.svg.createSVGPoint();
-        this.sector = this.querySelector('.TaskTimer-sector');
+        this.timeIndicator = this.querySelector('.TimeIndicator');
 
         this.timeRemaining = options.time;
-        this.isPaused = true;
+        this.setPaused(true);
         this.setTimeBar(options.time);
-    }
 
-    checkAngle() {
-        if (this.options.angle > 360) {
-            this.options.angle =  this.options.angle % 360;
-        }
-    }
+        this.querySelector('.StartStopButton').addEventListener('click',
+            e => this.togglePaused()
+        );
 
-    changeAngle(angle) {
-        this.options.angle = angle;
-        this.checkAngle();
-        this.sector.setAttribute('d', this.getSectorD());
+        this.querySelector('.TimeIndicatorForeground').addEventListener('click',
+            e => this.startTimer(this.getTimeClick(e))
+        );
     }
 
     cancelAnimation() {
@@ -79,8 +136,7 @@ class TaskTimer extends HTMLElement {
     }
 
     setTimeBar(timeRemaining) {
-        const angle = 360 * timeRemaining/3600;
-        this.changeAngle(angle);
+        this.setAngle(360 * timeRemaining/3600);
     }
 
     stepTimer(previousTickMs) {
@@ -92,56 +148,34 @@ class TaskTimer extends HTMLElement {
             this.animationId = requestAnimationFrame(() => this.stepTimer(now));
         }
         else {
-            this.isPaused = true;
-            this.changeAngle(0);
+            this.setAngle(0);
+            setPaused(true);
         }
     }
 
     startTimer(secs) {
         this.options.time = secs;
         this.timeRemaining = secs;
-        this.isPaused = false;
-
-        this.cancelAnimation();
-        this.animationId = requestAnimationFrame(() => this.stepTimer(new Date().valueOf()));
+        this.setPaused(false);
     }
 
-    togglePaused() {
-        if (this.isPaused && this.timeRemaining > 0) {
+    setPaused(paused) {
+        this.cancelAnimation();
+        if (!paused && this.timeRemaining > 0) {
             this.isPaused = false;
+            this.querySelector('.StartIcon').setAttribute('visibility', 'hidden');
+            this.querySelector('.PauseIcon').setAttribute('visibility', 'visible');
             this.animationId = requestAnimationFrame(() => this.stepTimer(new Date().valueOf()));
         }
         else {
             this.isPaused = true;
-            this.cancelAnimation();
+            this.querySelector('.StartIcon').setAttribute('visibility', 'visible');
+            this.querySelector('.PauseIcon').setAttribute('visibility', 'hidden');
         }
     }
 
-    getSectorD() {
-        const options = this.options;
-
-        // Arc angles
-        const firstAngle = options.angle > 180 ? 90 : options.angle - 90;
-        const secondAngle = -270 + options.angle - 180;
-
-        // Arcs
-        const firstArc = this.getArc(firstAngle, options);
-        const secondArc = options.angle > 180 ? this.getArc(secondAngle, options) : '';
-
-        return `M${options.center},${options.stroke / 2} ${firstArc} ${secondArc}`;
-    }
-
-    getSector() {
-        const options = this.options;
-
-        const d = this.getSectorD()
-
-        return `<path
-            class='TaskTimer-sector'
-            stroke-width='${options.stroke}'
-            fill='none'
-            stroke='#bD2828'
-            d='${d}' />`;
+    togglePaused() {
+        this.setPaused(!this.isPaused);
     }
 
     // Get time which the user clicked on
@@ -158,17 +192,22 @@ class TaskTimer extends HTMLElement {
         return 3600 * (Math.atan2(x, y) + Math.PI)/(2*Math.PI);
     }
 
-    getCircle() {
+    setAngle(angle) {
+        this.timeIndicator.setAttribute('d', this.getTimeIndicatorArcs(angle));
+    }
+
+    // private
+
+    getTimeIndicatorArcs(angle) {
         const options = this.options;
 
-        return `<circle
-            class='TaskTimer-circle'
-            stroke-width='${options.stroke}'
-            fill='none'
-            stroke=${options.circleColor}
-            cx='${options.center}'
-            cy='${options.center}'
-            r='${options.radius}' />`;
+        const firstAngle = angle > 180 ? 90 : angle - 90;
+        const secondAngle = -270 + angle - 180;
+
+        const firstArc = this.getArc(firstAngle, options);
+        const secondArc = angle > 180 ? this.getArc(secondAngle, options) : '';
+
+        return `M${options.center},${options.stroke / 2} ${firstArc} ${secondArc}`;
     }
 
     // Generates SVG arc string
