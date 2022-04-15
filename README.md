@@ -1,9 +1,11 @@
 # A visual task timer
 
 `<task-timer>` is a web component to help with time awareness by visually
-showing the passage of time.
+showing the passage of time. Use it on the [**live
+demo**](https://c42f.github.io/tasktimer/index.html) example page.
 
-![Screenshot](screenshot.png)
+
+[![Screenshot](screenshot.png)](https://c42f.github.io/tasktimer/index.html)
 
 Timers like this can help combat time blindness by showing time as space. In
 this timer, the full circle always represents a single hour of time. I think
