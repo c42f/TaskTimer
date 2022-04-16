@@ -5,10 +5,8 @@ class TaskTimer extends HTMLElement {
         this.animationId = false;
 
         let options = {
-              size: 200,
-              stroke: 30,
-              time: 20*60,
-              circleColor: '#DDD'
+            size: 200,
+            stroke: 30,
         };
 
         // Circle dimenstions
@@ -20,6 +18,7 @@ class TaskTimer extends HTMLElement {
         options.radius = r;
 
         this.options = options;
+        this.fullCircleTime = 3600;
 
         const tickR1 = options.size / 2;
         const tickR2 = options.size / 2 - options.stroke;
@@ -48,11 +47,17 @@ class TaskTimer extends HTMLElement {
                     class='TimeIndicatorBackground'
                     stroke-width='${s}'
                     fill='none'
-                    stroke=${options.circleColor}
+                    stroke='#CCC'
                     cx='${c}'
                     cy='${c}'
                     r='${r}'
                 />
+                <path
+                    class='TotalTimeIndicator'
+                    stroke-width='${s}'
+                    fill='none'
+                    stroke='#DDD'
+                    d=''/>
                 <g class="StartStopButton">
                     <circle
                         cx='${c}'
@@ -114,10 +119,9 @@ class TaskTimer extends HTMLElement {
 
         this.testPt = this.svg.createSVGPoint();
         this.timeIndicator = this.querySelector('.TimeIndicator');
+        this.totalTimeIndicator = this.querySelector('.TotalTimeIndicator');
 
-        this.timeRemaining = options.time;
-        this.setPaused(true);
-        this.setTimeBar(options.time);
+        this.setTotalTime(20*60);
 
         this.querySelector('.StartStopButton').addEventListener('click',
             e => this.togglePaused()
@@ -135,28 +139,31 @@ class TaskTimer extends HTMLElement {
         }
     }
 
-    setTimeBar(timeRemaining) {
-        this.setAngle(360 * timeRemaining/3600);
-    }
-
     stepTimer(previousTickMs) {
         const now = new Date().valueOf()
         this.timeRemaining -= (now - previousTickMs)/1000;
 
         if (this.timeRemaining > 0) {
-            this.setTimeBar(this.timeRemaining);
+            this.setTimeBar(this.timeIndicator, this.timeRemaining);
             this.animationId = requestAnimationFrame(() => this.stepTimer(now));
         }
         else {
-            this.setAngle(0);
-            setPaused(true);
+            this.setTimeBar(this.timeIndicator, 0);
+            this.setPaused(true);
         }
     }
 
     startTimer(secs) {
-        this.options.time = secs;
-        this.timeRemaining = secs;
+        this.setTotalTime(secs);
         this.setPaused(false);
+    }
+
+    setTotalTime(secs) {
+        this.setPaused(true);
+        this.totalTime = secs;
+        this.timeRemaining = secs;
+        this.setTimeBar(this.totalTimeIndicator, secs);
+        this.setTimeBar(this.timeIndicator, secs);
     }
 
     setPaused(paused) {
@@ -189,35 +196,34 @@ class TaskTimer extends HTMLElement {
         const y = p.y - this.options.center;
 
         // Return number of seconds which was clicked on
-        return 3600 * (Math.atan2(x, y) + Math.PI)/(2*Math.PI);
+        return this.fullCircleTime * (Math.atan2(x, y) + Math.PI)/(2*Math.PI);
     }
 
-    setAngle(angle) {
-        this.timeIndicator.setAttribute('d', this.getTimeIndicatorArcs(angle));
+    setTimeBar(timeIndicator, time) {
+        const angle = 360 * time/this.fullCircleTime;
+        timeIndicator.setAttribute('d', this.getTimeIndicatorArcs(angle));
     }
 
     // private
 
     getTimeIndicatorArcs(angle) {
-        const options = this.options;
-
         const firstAngle = angle > 180 ? 90 : angle - 90;
         const secondAngle = -270 + angle - 180;
 
-        const firstArc = this.getArc(firstAngle, options);
-        const secondArc = angle > 180 ? this.getArc(secondAngle, options) : '';
+        const options = this.options;
+        const firstArc = this.getArc(options.center, options.radius, firstAngle);
+        const secondArc = angle <= 180 ? '' :
+            this.getArc(options.center, options.radius, secondAngle);
 
         return `M${options.center},${options.stroke / 2} ${firstArc} ${secondArc}`;
     }
 
     // Generates SVG arc string
-    getArc(angle) {
-        const options = this.options;
+    getArc(center, radius, angle) {
+        const x = center - radius * Math.cos(this.deg2rad(angle));
+        const y = center + radius * Math.sin(this.deg2rad(angle));
 
-        const x = options.center - options.radius * Math.cos(this.deg2rad(angle));
-        const y = options.center + options.radius * Math.sin(this.deg2rad(angle));
-
-        return `A${options.radius},${options.radius} 0 0 0 ${x},${y}`
+        return `A${radius},${radius} 0 0 0 ${x},${y}`
     }
 
     // Converts from degrees to radians.
