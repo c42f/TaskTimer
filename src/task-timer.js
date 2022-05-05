@@ -103,6 +103,12 @@ class TaskTimer extends HTMLElement {
                     ${fiveMinuteTickMarks}
                 </g>
                 <path
+                    class='StartTimeIndicator'
+                    stroke-width='${s}'
+                    fill='none'
+                    stroke='#bD2828'
+                    d=''/>
+                <path
                     class='TimeIndicator'
                     stroke-width='${s}'
                     fill='none'
@@ -127,6 +133,7 @@ class TaskTimer extends HTMLElement {
         this.timeIndicator = this.querySelector('.TimeIndicator');
         this.extendedTimeIndicator = this.querySelector('.ExtendedTimeIndicator');
         this.totalTimeIndicator = this.querySelector('.TotalTimeIndicator');
+        this.startTimeIndicator = this.querySelector('.StartTimeIndicator');
 
         this.setTotalTime(20*60);
 
@@ -169,6 +176,11 @@ class TaskTimer extends HTMLElement {
         this.setTimeRemaining(secs);
         this.totalTime = secs;
         this.setTimeBar(this.totalTimeIndicator, secs);
+        // A small red bar at start of the time period lets us see remaining
+        // time reducing immediately when the timer starts.
+        const a1 = -360 * secs/this.fullCircleTime;
+        const a2 = a1 - 0.7;
+        this.startTimeIndicator.setAttribute('d', this.getArcPath(a1, a2));
     }
 
     setTimeRemaining(secs) {
@@ -219,38 +231,48 @@ class TaskTimer extends HTMLElement {
     // private
 
     setTimeBar(timeIndicator, time) {
-        const angle = -360 * time/this.fullCircleTime;
-        timeIndicator.setAttribute('d', this.getTimeIndicatorPath(angle));
+        const x = time/this.fullCircleTime;
+        timeIndicator.setAttribute('d', this.getArcPath(0, -360*x));
     }
 
     // Get SVG path string for an arc from the top of the timer clock. Positive
     // angles are measured clockwise from top in degrees (increasing negative
     // angles count backward).
-    getTimeIndicatorPath(angle) {
+    getArcPath(angle1, angle2) {
+        if (angle2 < angle1) {
+            [angle2, angle1] = [angle1, angle2];
+        }
+
         const c = this.options.center;
         const r = this.options.radius;
 
-        // We draw this as two connected arcs to avoid the singularity in
-        // representing a full circle with a single arc.
+        const a1 = angle1 / 180 * Math.PI;
+        const a2 = angle2 / 180 * Math.PI;
 
         // Start of arc at angle `a0 == 0`:
-        const x0 = c;
-        const y0 = c - r;
-        // Middle of arc
-        const a1 = angle / 180 * Math.PI / 2;
         const x1 = c + r * Math.sin(a1);
         const y1 = c - r * Math.cos(a1);
         // End of arc
-        const a2 = 2 * a1;
         const x2 = c + r * Math.sin(a2);
         const y2 = c - r * Math.cos(a2);
 
-        const sweepFlag = angle < 0 ? '0' : '1';
+        // If necessary we draw this as two connected arcs to avoid the
+        // singularity in representing a full circle with a single arc.
+        let midArc = ``;
+        if (angle2 - angle1 > 180) {
+            console.log(angle2 - angle1);
+            const am = (a1 + a2)/2;
+            const xm = c + r * Math.sin(am);
+            const ym = c - r * Math.cos(am);
+            midArc = `A${r},${r} 0 0 1 ${xm},${ym}`;
+        }
 
-        return `M${x0},${y0}
-            A${r},${r} 0 0 ${sweepFlag} ${x1},${y1}
-            A${r},${r} 0 0 ${sweepFlag} ${x2},${y2}
-        `
+        const p = `M${x1},${y1}
+            ${midArc}
+            A${r},${r} 0 0 1 ${x2},${y2}
+        `;
+        console.log(p);
+        return p;
     }
 }
 
