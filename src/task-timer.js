@@ -52,12 +52,6 @@ class TaskTimer extends HTMLElement {
                     cy='${c}'
                     r='${r}'
                 />
-                <path
-                    class='TotalTimeIndicator'
-                    stroke-width='${s}'
-                    fill='none'
-                    stroke='#DDD'
-                    d=''/>
                 <g class="StartStopButton">
                     <circle
                         cx='${c}'
@@ -85,7 +79,7 @@ class TaskTimer extends HTMLElement {
                     </g>
                 </g>
                 <path
-                    class='ExtendedTimeIndicator'
+                    class='CompletedTimeIndicator'
                     stroke-width='${s}'
                     fill='none'
                     stroke='#DDD'
@@ -103,16 +97,16 @@ class TaskTimer extends HTMLElement {
                     ${fiveMinuteTickMarks}
                 </g>
                 <path
-                    class='StartTimeIndicator'
+                    class='TimeIndicator'
                     stroke-width='${s}'
                     fill='none'
                     stroke='#bD2828'
                     d=''/>
                 <path
-                    class='TimeIndicator'
+                    class='StartTimeIndicator'
                     stroke-width='${s}'
                     fill='none'
-                    stroke='#bD2828'
+                    stroke='#555'
                     d=''/>
                 <circle
                     class='TimeIndicatorForeground'
@@ -131,8 +125,7 @@ class TaskTimer extends HTMLElement {
 
         this.testPt = this.svg.createSVGPoint();
         this.timeIndicator = this.querySelector('.TimeIndicator');
-        this.extendedTimeIndicator = this.querySelector('.ExtendedTimeIndicator');
-        this.totalTimeIndicator = this.querySelector('.TotalTimeIndicator');
+        this.completedTimeIndicator = this.querySelector('.CompletedTimeIndicator');
         this.startTimeIndicator = this.querySelector('.StartTimeIndicator');
 
         this.setTotalTime(20*60);
@@ -172,27 +165,21 @@ class TaskTimer extends HTMLElement {
     }
 
     setTotalTime(secs) {
+        if (secs > this.fullCircleTime) {
+            secs = this.fullCircleTime;
+        }
         this.setPaused(true);
         this.setTimeRemaining(secs);
         this.totalTime = secs;
-        this.setTimeBar(this.totalTimeIndicator, secs);
-        // A small red bar at start of the time period lets us see remaining
-        // time reducing immediately when the timer starts.
-        const a1 = -360 * secs/this.fullCircleTime;
-        const a2 = a1 - 0.7;
-        this.startTimeIndicator.setAttribute('d', this.getArcPath(a1, a2));
+        // A small bar at start of the time period lets us see remaining time
+        // reducing immediately when the timer starts.
+        this.setTimeBar(this.startTimeIndicator, secs, secs + 0.002*this.fullCircleTime)
     }
 
     setTimeRemaining(secs) {
         this.timeRemaining = secs;
-        if (secs > 0) {
-            this.setTimeBar(this.timeIndicator, secs)
-            this.setTimeBar(this.extendedTimeIndicator, 0);
-        }
-        else {
-            this.setTimeBar(this.timeIndicator, 0);
-            this.setTimeBar(this.extendedTimeIndicator, secs);
-        }
+        this.setTimeBar(this.timeIndicator, secs > 0 ? secs : 0, 0)
+        this.setTimeBar(this.completedTimeIndicator, this.totalTime, secs);
     }
 
     setPaused(paused) {
@@ -230,16 +217,20 @@ class TaskTimer extends HTMLElement {
 
     // private
 
-    setTimeBar(timeIndicator, time) {
-        const x = time/this.fullCircleTime;
-        timeIndicator.setAttribute('d', this.getArcPath(0, -360*x));
+    setTimeBar(timeIndicator, time1, time2) {
+        const angle1 = -360*time1/this.fullCircleTime;
+        const angle2 = -360*time2/this.fullCircleTime;
+        timeIndicator.setAttribute('d', this.getArcPath(angle1, angle2));
     }
 
     // Get SVG path string for an arc from the top of the timer clock. Positive
     // angles are measured clockwise from top in degrees (increasing negative
     // angles count backward).
     getArcPath(angle1, angle2) {
-        if (angle2 < angle1) {
+        if (angle1 == angle2) {
+            return ``;
+        }
+        else if (angle2 < angle1) {
             [angle2, angle1] = [angle1, angle2];
         }
 
