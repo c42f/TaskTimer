@@ -139,26 +139,6 @@ class TaskTimer extends HTMLElement {
         );
     }
 
-    cancelAnimation() {
-        if (this.animationId) {
-            cancelAnimationFrame(this.animationId);
-            this.animationId = false;
-        }
-    }
-
-    stepTimer(previousTickMs) {
-        const now = new Date().valueOf();
-        let timeRemaining = this.timeRemaining - (now - previousTickMs)/1000;
-        if (this.totalTime - timeRemaining < this.fullCircleTime) {
-            this.animationId = requestAnimationFrame(() => this.stepTimer(now));
-        }
-        else {
-            timeRemaining = this.totalTime - this.fullCircleTime;
-            this.setPaused(true);
-        }
-        this.setTimeRemaining(timeRemaining);
-    }
-
     startTimer(secs) {
         this.setTotalTime(secs);
         this.setPaused(false);
@@ -215,7 +195,27 @@ class TaskTimer extends HTMLElement {
         return this.fullCircleTime * (Math.atan2(x, y) + Math.PI)/(2*Math.PI);
     }
 
+    //----------------------------------------------------------------------
     // private
+    cancelAnimation() {
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+            this.animationId = false;
+        }
+    }
+
+    stepTimer(previousTickMs) {
+        const now = new Date().valueOf();
+        let timeRemaining = this.timeRemaining - (now - previousTickMs)/1000;
+        if (this.totalTime - timeRemaining < this.fullCircleTime) {
+            this.animationId = requestAnimationFrame(() => this.stepTimer(now));
+        }
+        else {
+            timeRemaining = this.totalTime - this.fullCircleTime;
+            this.setPaused(true);
+        }
+        this.setTimeRemaining(timeRemaining);
+    }
 
     setTimeBar(timeIndicator, time1, time2) {
         const angle1 = -360*time1/this.fullCircleTime;
