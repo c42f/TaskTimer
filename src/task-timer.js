@@ -268,6 +268,6 @@ class TaskTimer extends HTMLElement {
 }
 
 if (!window.customElements.get('task-timer')) {
-  window.TaskTimer = TaskTimer
-  window.customElements.define('task-timer', TaskTimer)
+    window.TaskTimer = TaskTimer
+    window.customElements.define('task-timer', TaskTimer)
 }
